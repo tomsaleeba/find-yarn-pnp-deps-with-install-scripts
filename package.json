@@ -1,0 +1,13 @@
+{
+  "name": "find-yarn-pnp-deps-with-install-scripts",
+  "version": "0.1.0",
+  "description": "Find yarn plug'n'play dependencies that declare install scripts",
+  "bin": {
+    "main": "./bin/main.js"
+  },
+  "files": [
+    "bin/"
+  ],
+  "author": "Tom Saleeba",
+  "license": "MIT"
+}
