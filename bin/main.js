@@ -37,7 +37,8 @@ async function processZip(zipFile) {
       const packageJsonObj = JSON.parse(packageJsonContentStr)
       if (hasInstallScripts(packageJsonObj)) {
         const name = packageJsonObj.name || zipFile
-        console.log(name)
+        const version = packageJsonObj.version || 'unknown'
+        console.log(`${name}@${version}`)
       }
     } catch (err) {
       console.error(`[ERROR] failed to parse ${packageJsonPath} for ${zipFile}`, err)
@@ -98,7 +99,8 @@ async function processNodeModulesPackage(packageJsonPath) {
     const packageJsonObj = JSON.parse(packageJsonContent)
     if (hasInstallScripts(packageJsonObj)) {
       const name = packageJsonObj.name || relativePath
-      console.log(name)
+      const version = packageJsonObj.version || 'unknown'
+      console.log(`${name}@${version}`)
     }
   } catch (err) {
     console.error(`[ERROR] failed to process ${packageJsonPath}`, err.message)

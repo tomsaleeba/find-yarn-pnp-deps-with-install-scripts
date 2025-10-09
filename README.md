@@ -41,11 +41,11 @@ Checking event-loop-lag-npm-1.4.0-294a2c0c07-784e59a0b4.zip
 Checking event-loop-stats-npm-1.4.1-2e76123f7d-12e6f72e08.zip
 Checking eventemitter3-npm-4.0.7-7afcdd74ae-5f6d97cbcb.zip
 Checking execa-npm-5.1.1-191347acf5-c8e615235e.zip
-event-loop-stats
+event-loop-stats@1.4.1
 ...(snip)...
 
 $ cat results.txt
-event-loop-stats
+event-loop-stats@1.4.1
 ```
 
 Example output (node_modules):
@@ -55,11 +55,11 @@ Scanning node_modules...
 Checking puppeteer
 Checking @types/node
 Checking eslint
-puppeteer
+puppeteer@13.5.2
 ...(snip)...
 
 $ cat results.txt
-puppeteer
+puppeteer@13.5.2
 ```
 
 I had hoped it would work with `yarn dlx` too, but it doesn't:
