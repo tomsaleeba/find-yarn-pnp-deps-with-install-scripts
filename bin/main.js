@@ -58,34 +58,34 @@ function* findPackageJsonFiles(dir, depth = 0, maxDepth = 20) {
   if (depth > maxDepth) {
     return
   }
-
   try {
     const entries = fs.readdirSync(dir, { withFileTypes: true })
-
     for (const entry of entries) {
       const fullPath = path.join(dir, entry.name)
-
-      // Skip symlinks to avoid infinite loops
       if (entry.isSymbolicLink()) {
+        // Skip symlinks to avoid infinite loops
         continue
       }
-
-      if (entry.isDirectory()) {
-        // If this is a package directory (has package.json), yield it
-        const packageJsonPath = path.join(fullPath, 'package.json')
-        if (fs.existsSync(packageJsonPath)) {
-          yield packageJsonPath
-        }
-
-        // Recurse into node_modules subdirectories
-        if (entry.name === 'node_modules') {
-          yield* findPackageJsonFiles(fullPath, depth + 1, maxDepth)
+      if (!entry.isDirectory()) {
+        continue
+      }
+      const packageJsonPath = path.join(fullPath, 'package.json')
+      const hasPackageJson = fs.existsSync(packageJsonPath)
+      if (hasPackageJson) {
+        yield packageJsonPath
+      }
+      if (entry.name === 'node_modules' || entry.name.startsWith('@')) {
+        yield* findPackageJsonFiles(fullPath, depth + 1, maxDepth)
+      }
+      if (hasPackageJson) {
+        const nestedNodeModules = path.join(fullPath, 'node_modules')
+        if (fs.existsSync(nestedNodeModules)) {
+          yield* findPackageJsonFiles(nestedNodeModules, depth + 1, maxDepth)
         }
       }
     }
   } catch (err) {
-    // Skip directories we can't read
-    console.error(`[WARN] Could not read directory ${dir}`, err.message)
+    console.warn(`[WARN] Could not read directory ${dir}, skipping...`, err.message)
   }
 }
 
@@ -94,16 +94,21 @@ async function processNodeModulesPackage(packageJsonPath) {
     const packageDir = path.dirname(packageJsonPath)
     const relativePath = path.relative('node_modules', packageDir)
     console.error(`\x1b[90mChecking ${relativePath}\x1b[0m`)
-
     const packageJsonContent = fs.readFileSync(packageJsonPath, 'utf8')
     const packageJsonObj = JSON.parse(packageJsonContent)
-
     if (hasInstallScripts(packageJsonObj)) {
       const name = packageJsonObj.name || relativePath
       console.log(name)
     }
   } catch (err) {
     console.error(`[ERROR] failed to process ${packageJsonPath}`, err.message)
+  }
+}
+
+async function processInChunks(items, processFn, chunkSize = 10) {
+  for (let i = 0; i < items.length; i += chunkSize) {
+    const chunk = items.slice(i, i + chunkSize)
+    await Promise.all(chunk.map(processFn))
   }
 }
 
@@ -118,25 +123,13 @@ async function main() {
       const zipFiles = fs.readdirSync(yarnCacheDir)
         .filter(file => file.endsWith('.zip'))
         .map(file => path.join(yarnCacheDir, file))
-
-      // Process files with basic parallelism using Promise.all with chunks
-      const chunkSize = 10
-      for (let i = 0; i < zipFiles.length; i += chunkSize) {
-        const chunk = zipFiles.slice(i, i + chunkSize)
-        await Promise.all(chunk.map(processZip))
-      }
+      await processInChunks(zipFiles, processZip)
       return
     }
     if (hasNodeModules) {
       console.error('\x1b[36mScanning node_modules...\x1b[0m')
       const packageJsonFiles = Array.from(findPackageJsonFiles(nodeModulesDir))
-
-      // Process with same chunking strategy
-      const chunkSize = 10
-      for (let i = 0; i < packageJsonFiles.length; i += chunkSize) {
-        const chunk = packageJsonFiles.slice(i, i + chunkSize)
-        await Promise.all(chunk.map(processNodeModulesPackage))
-      }
+      await processInChunks(packageJsonFiles, processNodeModulesPackage)
       return
     }
     console.error(`No ${yarnCacheDir} or ${nodeModulesDir} directory found`)
